@@ -15,6 +15,7 @@ export const register = async (req, res) => {
 
     res.status(201).json({
       message: "User registered successfully. Please choose your role.",
+      token: result.token,
       user: result.user,
     });
   } catch (error) {
@@ -35,6 +36,7 @@ export const chooseRole = async (req, res) => {
 
     res.status(200).json({
       message: "Role selected successfully. Please complete your profile.",
+      token: result.token,
       user: result.user,
     });
   } catch (error) {
@@ -55,6 +57,7 @@ export const completeProfile = async (req, res) => {
 
     res.status(200).json({
       message: "Profile completed successfully",
+      token: result.token,
       user: result.user,
     });
   } catch (error) {
@@ -72,6 +75,7 @@ export const login = async (req, res) => {
 
     res.status(200).json({
       message: "Login successful",
+      token: result.token,
       user: result.user,
     });
   } catch (error) {
