@@ -6,7 +6,6 @@ const Pickup = {
     {
       reservation_id,
       code,
-      qr_code,
       expires_at,
     },
     client = db
@@ -15,17 +14,15 @@ const Pickup = {
       INSERT INTO pickups (
         reservation_id,
         code,
-        qr_code,
         expires_at
       )
-      VALUES ($1, $2, $3, $4)
+      VALUES ($1, $2, $3)
       RETURNING *;
     `;
 
     const values = [
       reservation_id,
       code,
-      qr_code,
       expires_at,
     ];
 
@@ -93,6 +90,46 @@ const Pickup = {
     return result.rows[0];
   },
 
+  // FIND BY CODE + RESERVATION
+  async findByCodeAndReservation(
+    reservation_id,
+    code,
+    client = db
+  ) {
+    const query = `
+      SELECT 
+        p.*,
+
+        r.status AS reservation_status,
+        r.user_id AS receiver_user_id,
+        r.requested_quantity,
+        r.listing_id,
+        r.reservation_id,
+
+        fl.restaurant_id,
+        fl.food_name
+
+      FROM pickups p
+
+      JOIN reservations r
+      ON p.reservation_id = r.reservation_id
+
+      JOIN food_listings fl
+      ON r.listing_id = fl.listing_id
+
+      WHERE
+        p.reservation_id = $1
+        AND p.code = $2;
+    `;
+
+    const result = await client.query(
+      query,
+      [reservation_id, code]
+    );
+
+    return result.rows[0];
+  },
+
   // MARK AS USED
   async markAsUsed(
     pickup_id,
@@ -139,4 +176,4 @@ const Pickup = {
   },
 };
 
-export default Pickup;
+export default Pickup;  
