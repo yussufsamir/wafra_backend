@@ -41,12 +41,16 @@ export const generatePickupCode =
 export const confirmPickup =
   async (req, res) => {
     try {
-      const { code } = req.body;
+      const {
+        reservation_id,
+        pickup_code,
+      } = req.body;
 
       const result =
         await confirmPickupService(
           req.user.user_id,
-          code
+          reservation_id,
+          pickup_code
         );
 
       res.status(200).json({

@@ -6,7 +6,6 @@ import Restaurant from "../models/restaurant.model.js";
 import Listing from "../models/listing.model.js";
 
 import { generateCode } from "../utils/generateCode.js";
-import { generateQRCode } from "../utils/generateQRCode.js";
 
 // GENERATE PICKUP CODE
 export const generatePickupCodeService =
@@ -47,14 +46,20 @@ export const generatePickupCodeService =
     if (existingPickup) {
       return {
         alreadyExists: true,
-        pickup: existingPickup,
+
+        pickup: {
+          ...existingPickup,
+
+          qr_payload: {
+            reservation_id,
+            pickup_code:
+              existingPickup.code,
+          },
+        },
       };
     }
 
     const code = generateCode();
-
-    const qr_code =
-      await generateQRCode(code);
 
     const expires_at = new Date(
       Date.now() +
@@ -64,19 +69,30 @@ export const generatePickupCodeService =
     const pickup = await Pickup.create({
       reservation_id,
       code,
-      qr_code,
       expires_at,
     });
 
     return {
       alreadyExists: false,
-      pickup,
+
+      pickup: {
+        ...pickup,
+
+        qr_payload: {
+          reservation_id,
+          pickup_code: code,
+        },
+      },
     };
   };
 
 // CONFIRM PICKUP
 export const confirmPickupService =
-  async (user_id, code) => {
+  async (
+    user_id,
+    reservation_id,
+    pickup_code
+  ) => {
     const client = await db.connect();
 
     try {
@@ -94,14 +110,15 @@ export const confirmPickupService =
       }
 
       const pickup =
-        await Pickup.findByCode(
-          code,
+        await Pickup.findByCodeAndReservation(
+          reservation_id,
+          pickup_code,
           client
         );
 
       if (!pickup) {
         throw new Error(
-          "Invalid pickup code"
+          "Invalid pickup data"
         );
       }
 
