@@ -71,24 +71,7 @@ const User = {
   const result = await db.query(query, [role, user_id]);
   return result.rows[0];
   },
-
-  async completeRole(user_id, { role, verification_status }) {
-    const query = `
-      UPDATE users
-      SET
-        role = $1,
-        verification_status = $2,
-        updated_at = CURRENT_TIMESTAMP
-      WHERE user_id = $3
-      RETURNING user_id, username, email, role, verification_status, updated_at;
-    `;
-
-    const values = [role, verification_status, user_id];
-
-    const result = await db.query(query, values);
-    return result.rows[0];
-  },
-
+  
   async findAll() {
     const query = `
       SELECT user_id, username, email, role, verification_status, created_at

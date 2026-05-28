@@ -1,7 +1,16 @@
 import db from "../config/db.js";
 
 const Pickup = {
-  async create({ reservation_id, code, qr_code, expires_at }) {
+  // CREATE PICKUP
+  async create(
+    {
+      reservation_id,
+      code,
+      qr_code,
+      expires_at,
+    },
+    client = db
+  ) {
     const query = `
       INSERT INTO pickups (
         reservation_id,
@@ -13,42 +22,82 @@ const Pickup = {
       RETURNING *;
     `;
 
-    const values = [reservation_id, code, qr_code, expires_at];
+    const values = [
+      reservation_id,
+      code,
+      qr_code,
+      expires_at,
+    ];
 
-    const result = await db.query(query, values);
+    const result = await client.query(
+      query,
+      values
+    );
+
     return result.rows[0];
   },
 
-  async findByReservationId(reservation_id) {
+  // FIND BY RESERVATION
+  async findByReservationId(
+    reservation_id,
+    client = db
+  ) {
     const query = `
       SELECT *
       FROM pickups
       WHERE reservation_id = $1;
     `;
 
-    const result = await db.query(query, [reservation_id]);
+    const result = await client.query(
+      query,
+      [reservation_id]
+    );
+
     return result.rows[0];
   },
 
-  async findByCode(code) {
+  // FIND BY CODE
+  async findByCode(
+    code,
+    client = db
+  ) {
     const query = `
       SELECT 
         p.*,
+
         r.status AS reservation_status,
         r.user_id AS receiver_user_id,
+        r.requested_quantity,
+        r.listing_id,
+        r.reservation_id,
+
         fl.restaurant_id,
         fl.food_name
+
       FROM pickups p
-      JOIN reservations r ON p.reservation_id = r.reservation_id
-      JOIN food_listings fl ON r.listing_id = fl.listing_id
+
+      JOIN reservations r
+      ON p.reservation_id = r.reservation_id
+
+      JOIN food_listings fl
+      ON r.listing_id = fl.listing_id
+
       WHERE p.code = $1;
     `;
 
-    const result = await db.query(query, [code]);
+    const result = await client.query(
+      query,
+      [code]
+    );
+
     return result.rows[0];
   },
 
-  async markAsUsed(pickup_id) {
+  // MARK AS USED
+  async markAsUsed(
+    pickup_id,
+    client = db
+  ) {
     const query = `
       UPDATE pickups
       SET
@@ -59,11 +108,19 @@ const Pickup = {
       RETURNING *;
     `;
 
-    const result = await db.query(query, [pickup_id]);
+    const result = await client.query(
+      query,
+      [pickup_id]
+    );
+
     return result.rows[0];
   },
 
-  async expirePickup(pickup_id) {
+  // EXPIRE PICKUP
+  async expirePickup(
+    pickup_id,
+    client = db
+  ) {
     const query = `
       UPDATE pickups
       SET
@@ -73,7 +130,11 @@ const Pickup = {
       RETURNING *;
     `;
 
-    const result = await db.query(query, [pickup_id]);
+    const result = await client.query(
+      query,
+      [pickup_id]
+    );
+
     return result.rows[0];
   },
 };

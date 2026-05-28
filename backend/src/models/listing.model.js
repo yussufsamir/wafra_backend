@@ -67,7 +67,7 @@ const Listing = {
     return result.rows.map(parseTags);
   },
 
-  async findById(listing_id) {
+  async findById(listing_id , client = db) {
     const query = `
       SELECT 
         fl.*,
@@ -78,7 +78,7 @@ const Listing = {
       WHERE fl.listing_id = $1;
     `;
 
-    const result = await db.query(query, [listing_id]);
+    const result = await client.query(query, [listing_id]);
     return parseTags(result.rows[0]);
   },
 
@@ -139,7 +139,7 @@ const Listing = {
     return parseTags(result.rows[0]);
   },
 
-  async reduceQuantity(listing_id, amount) {
+  async reduceQuantity(listing_id, amount , client = db) {
     const query = `
       UPDATE food_listings
       SET
@@ -150,14 +150,14 @@ const Listing = {
       RETURNING *;
     `;
 
-    const result = await db.query(query, [amount, listing_id]);
+    const result = await client.query(query, [amount, listing_id]);
     if (result.rowCount === 0) {
       throw new Error("Not enough quantity available");
     }
     return parseTags(result.rows[0]);
   },
 
-  async restoreQuantity(listing_id, amount) {
+  async restoreQuantity(listing_id, amount, client = db) {
     const query = `
       UPDATE food_listings
       SET
@@ -168,7 +168,7 @@ const Listing = {
       RETURNING *;
     `;
 
-    const result = await db.query(query, [amount, listing_id]);
+    const result = await client.query(query, [amount, listing_id]);
     return parseTags(result.rows[0]);
   },
 

@@ -1,41 +1,27 @@
-import Reservation from "../models/reservation.model.js";
-import Listing from "../models/listing.model.js";
-import Restaurant from "../models/restaurant.model.js";
+import {
+  createReservationService,
+  getMyReservationsService,
+  getRestaurantReservationsService,
+  acceptReservationService,
+  declineReservationService,
+  cancelReservationService,
+} from "../services/reservation.service.js";
 
-export const createReservation = async (req, res) => {
+// CREATE RESERVATION
+export const createReservation = async (
+  req,
+  res
+) => {
   try {
-    const { listing_id, requested_quantity } = req.body;
-
-    const listing = await Listing.findById(listing_id);
-
-    if (!listing) {
-      return res.status(404).json({
-        error: "Listing not found",
-      });
-    }
-
-    if (listing.status !== "available") {
-      return res.status(400).json({
-        error: "This listing is not available",
-      });
-    }
-
-    if (Number(requested_quantity) > Number(listing.quantity)) {
-      return res.status(400).json({
-        error: "Requested quantity is greater than available quantity",
-      });
-    }
-
-    const reservation = await Reservation.create({
-      listing_id,
-      user_id: req.user.user_id,
-      requested_quantity,
-    });
-
-    await Listing.reduceQuantity(listing_id, requested_quantity);
+    const reservation =
+      await createReservationService(
+        req.user.user_id,
+        req.body
+      );
 
     res.status(201).json({
-      message: "Reservation request created successfully",
+      message:
+        "Reservation request created successfully",
       reservation,
     });
   } catch (error) {
@@ -45,9 +31,16 @@ export const createReservation = async (req, res) => {
   }
 };
 
-export const getMyReservations = async (req, res) => {
+// GET MY RESERVATIONS
+export const getMyReservations = async (
+  req,
+  res
+) => {
   try {
-    const reservations = await Reservation.findByUserId(req.user.user_id);
+    const reservations =
+      await getMyReservationsService(
+        req.user.user_id
+      );
 
     res.status(200).json({
       count: reservations.length,
@@ -60,65 +53,42 @@ export const getMyReservations = async (req, res) => {
   }
 };
 
-export const getRestaurantReservations = async (req, res) => {
-  try {
-    const restaurant = await Restaurant.findByUserId(req.user.user_id);
+// GET RESTAURANT RESERVATIONS
+export const getRestaurantReservations =
+  async (req, res) => {
+    try {
+      const reservations =
+        await getRestaurantReservationsService(
+          req.user.user_id
+        );
 
-    if (!restaurant) {
-      return res.status(404).json({
-        error: "Restaurant profile not found",
+      res.status(200).json({
+        count: reservations.length,
+        reservations,
+      });
+    } catch (error) {
+      res.status(500).json({
+        error: error.message,
       });
     }
+  };
 
-    const reservations = await Reservation.findByRestaurantId(
-      restaurant.restaurant_id
-    );
+// ACCEPT RESERVATION
+export const acceptReservation = async (
+  req,
+  res
+) => {
+  try {
+    const reservation =
+      await acceptReservationService(
+        req.user.user_id,
+        req.params.id
+      );
 
     res.status(200).json({
-      count: reservations.length,
-      reservations,
-    });
-  } catch (error) {
-    res.status(500).json({
-      error: error.message,
-    });
-  }
-};
-
-export const acceptReservation = async (req, res) => {
-  try {
-    const restaurant = await Restaurant.findByUserId(req.user.user_id);
-    const reservation = await Reservation.findById(req.params.id);
-
-    if (!restaurant) {
-      return res.status(404).json({
-        error: "Restaurant profile not found",
-      });
-    }
-
-    if (!reservation) {
-      return res.status(404).json({
-        error: "Reservation not found",
-      });
-    }
-
-    if (Number(reservation.restaurant_id) !== Number(restaurant.restaurant_id)) {
-      return res.status(403).json({
-        error: "You can only accept reservations for your own listings",
-      });
-    }
-
-    if (reservation.status !== "pending") {
-      return res.status(400).json({
-        error: "Only pending reservations can be accepted",
-      });
-    }
-
-    const updatedReservation = await Reservation.accept(req.params.id);
-
-    res.status(200).json({
-      message: "Reservation accepted successfully",
-      reservation: updatedReservation,
+      message:
+        "Reservation accepted successfully",
+      reservation,
     });
   } catch (error) {
     res.status(400).json({
@@ -127,42 +97,22 @@ export const acceptReservation = async (req, res) => {
   }
 };
 
-export const declineReservation = async (req, res) => {
+// DECLINE RESERVATION
+export const declineReservation = async (
+  req,
+  res
+) => {
   try {
-    const restaurant = await Restaurant.findByUserId(req.user.user_id);
-    const reservation = await Reservation.findById(req.params.id);
-
-    if (!restaurant) {
-      return res.status(404).json({
-        error: "Restaurant profile not found",
-      });
-    }
-
-    if (!reservation) {
-      return res.status(404).json({
-        error: "Reservation not found",
-      });
-    }
-
-    if (Number(reservation.restaurant_id) !== Number(restaurant.restaurant_id)) {
-      return res.status(403).json({
-        error: "You can only decline reservations for your own listings",
-      });
-    }
-
-    if (reservation.status !== "pending") {
-      return res.status(400).json({
-        error: "Only pending reservations can be declined",
-      });
-    }
-
-    const updatedReservation = await Reservation.decline(req.params.id);
-
-    await Listing.restoreQuantity(reservation.listing_id, reservation.requested_quantity);
+    const reservation =
+      await declineReservationService(
+        req.user.user_id,
+        req.params.id
+      );
 
     res.status(200).json({
-      message: "Reservation declined successfully",
-      reservation: updatedReservation,
+      message:
+        "Reservation declined successfully",
+      reservation,
     });
   } catch (error) {
     res.status(400).json({
@@ -171,35 +121,22 @@ export const declineReservation = async (req, res) => {
   }
 };
 
-export const cancelReservation = async (req, res) => {
+// CANCEL RESERVATION
+export const cancelReservation = async (
+  req,
+  res
+) => {
   try {
-    const reservation = await Reservation.findById(req.params.id);
-
-    if (!reservation) {
-      return res.status(404).json({
-        error: "Reservation not found",
-      });
-    }
-
-    if (Number(reservation.user_id) !== Number(req.user.user_id)) {
-      return res.status(403).json({
-        error: "You can only cancel your own reservations",
-      });
-    }
-
-    if (reservation.status !== "pending") {
-      return res.status(400).json({
-        error: "Only pending reservations can be cancelled",
-      });
-    }
-
-    const updatedReservation = await Reservation.cancel(req.params.id);
-
-    await Listing.restoreQuantity(reservation.listing_id, reservation.requested_quantity);
+    const reservation =
+      await cancelReservationService(
+        req.user.user_id,
+        req.params.id
+      );
 
     res.status(200).json({
-      message: "Reservation cancelled successfully",
-      reservation: updatedReservation,
+      message:
+        "Reservation cancelled successfully",
+      reservation,
     });
   } catch (error) {
     res.status(400).json({

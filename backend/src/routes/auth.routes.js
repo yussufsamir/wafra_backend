@@ -17,6 +17,6 @@ router.post("/login", login);
 router.post("/logout", logout);
 
 router.patch("/choose-role", authMiddleware, chooseRole);
-router.post("/complete-profile", authMiddleware, completeProfile);
+router.patch("/complete-profile", authMiddleware, completeProfile);
 
 export default router;

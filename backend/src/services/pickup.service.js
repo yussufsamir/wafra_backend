@@ -1,25 +1,189 @@
-import * as pickupModel from "../models/pickup.model.js";
-import * as reservationModel from "../models/reservation.model.js";
+import db from "../config/db.js";
+
+import Pickup from "../models/pickup.model.js";
+import Reservation from "../models/reservation.model.js";
+import Restaurant from "../models/restaurant.model.js";
+import Listing from "../models/listing.model.js";
+
 import { generateCode } from "../utils/generateCode.js";
+import { generateQRCode } from "../utils/generateQRCode.js";
 
-export const generatePickup = async (reservationId) => {
-  const reservation = await reservationModel.findById(reservationId);
+// GENERATE PICKUP CODE
+export const generatePickupCodeService =
+  async (user_id, reservation_id) => {
+    const reservation =
+      await Reservation.findById(
+        reservation_id
+      );
 
-  if (!reservation) throw new Error("Reservation not found");
+    if (!reservation) {
+      throw new Error(
+        "Reservation not found"
+      );
+    }
 
-  const code = generateCode();
+    if (
+      Number(reservation.user_id) !==
+      Number(user_id)
+    ) {
+      throw new Error(
+        "You can only generate pickup code for your own reservation"
+      );
+    }
 
-  const pickup = await pickupModel.create(reservationId, code);
+    if (
+      reservation.status !== "accepted"
+    ) {
+      throw new Error(
+        "Pickup code can only be generated for accepted reservations"
+      );
+    }
 
-  return { message: "Pickup code generated", code, pickup };
-};
+    const existingPickup =
+      await Pickup.findByReservationId(
+        reservation_id
+      );
 
-export const confirmPickup = async (code) => {
-  const pickup = await pickupModel.findByCode(code);
+    if (existingPickup) {
+      return {
+        alreadyExists: true,
+        pickup: existingPickup,
+      };
+    }
 
-  if (!pickup) throw new Error("Invalid code");
+    const code = generateCode();
 
-  await reservationModel.updateStatus(pickup.reservation_id, "completed");
+    const qr_code =
+      await generateQRCode(code);
 
-  return { message: "Pickup confirmed" };
-};
+    const expires_at = new Date(
+      Date.now() +
+        24 * 60 * 60 * 1000
+    );
+
+    const pickup = await Pickup.create({
+      reservation_id,
+      code,
+      qr_code,
+      expires_at,
+    });
+
+    return {
+      alreadyExists: false,
+      pickup,
+    };
+  };
+
+// CONFIRM PICKUP
+export const confirmPickupService =
+  async (user_id, code) => {
+    const client = await db.connect();
+
+    try {
+      await client.query("BEGIN");
+
+      const restaurant =
+        await Restaurant.findByUserId(
+          user_id
+        );
+
+      if (!restaurant) {
+        throw new Error(
+          "Restaurant profile not found"
+        );
+      }
+
+      const pickup =
+        await Pickup.findByCode(
+          code,
+          client
+        );
+
+      if (!pickup) {
+        throw new Error(
+          "Invalid pickup code"
+        );
+      }
+
+      if (pickup.status !== "active") {
+        throw new Error(
+          "Pickup code is not active"
+        );
+      }
+
+      // EXPIRED PICKUP
+      if (
+        pickup.expires_at &&
+        new Date(pickup.expires_at) <
+          new Date()
+      ) {
+        await Pickup.expirePickup(
+          pickup.pickup_id,
+          client
+        );
+
+        await Reservation.cancel(
+          pickup.reservation_id,
+          client
+        );
+
+        await Listing.restoreQuantity(
+          pickup.listing_id,
+          pickup.requested_quantity,
+          client
+        );
+
+        await client.query("COMMIT");
+
+        throw new Error(
+          "Pickup code has expired"
+        );
+      }
+
+      if (
+        pickup.reservation_status !==
+        "accepted"
+      ) {
+        throw new Error(
+          "Only accepted reservations can be confirmed"
+        );
+      }
+
+      if (
+        Number(pickup.restaurant_id) !==
+        Number(
+          restaurant.restaurant_id
+        )
+      ) {
+        throw new Error(
+          "You can only confirm pickup for your own restaurant listings"
+        );
+      }
+
+      const usedPickup =
+        await Pickup.markAsUsed(
+          pickup.pickup_id,
+          client
+        );
+
+      const completedReservation =
+        await Reservation.complete(
+          pickup.reservation_id,
+          client
+        );
+
+      await client.query("COMMIT");
+
+      return {
+        pickup: usedPickup,
+        reservation:
+          completedReservation,
+      };
+    } catch (error) {
+      await client.query("ROLLBACK");
+
+      throw error;
+    } finally {
+      client.release();
+    }
+  };

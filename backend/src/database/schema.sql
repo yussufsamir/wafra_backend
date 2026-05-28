@@ -121,7 +121,7 @@ CREATE TABLE IF NOT EXISTS pickups (
 
     reservation_id INT UNIQUE NOT NULL,
 
-    code VARCHAR(10) NOT NULL,
+    code VARCHAR(10) NOT NULL UNIQUE,
     qr_code TEXT,
 
     status VARCHAR(20) DEFAULT 'active' CHECK (
