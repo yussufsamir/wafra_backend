@@ -82,6 +82,24 @@ const User = {
     return result.rows;
   },
 
+  async setEmailVerified(user_id) {
+    const query = `
+      UPDATE users SET is_email_verified = TRUE, updated_at = CURRENT_TIMESTAMP
+      WHERE user_id = $1
+      RETURNING user_id, username, email, role, verification_status, is_email_verified;
+    `;
+    const result = await db.query(query, [user_id]);
+    return result.rows[0];
+  },
+
+  async updatePassword(user_id, hashedPassword) {
+    const query = `
+      UPDATE users SET password = $1, updated_at = CURRENT_TIMESTAMP
+      WHERE user_id = $2;
+    `;
+    await db.query(query, [hashedPassword, user_id]);
+  },
+
   async updateVerificationStatus(user_id, verification_status) {
     const query = `
       UPDATE users

@@ -12,8 +12,21 @@ CREATE TABLE IF NOT EXISTS users (
         verification_status IN ('incomplete', 'pending', 'approved', 'rejected')
     ),
 
+    is_email_verified BOOLEAN DEFAULT FALSE,
+
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS verification_codes (
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL,
+    code VARCHAR(6) NOT NULL,
+    type VARCHAR(25) NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    used BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS restaurants (

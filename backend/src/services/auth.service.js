@@ -4,13 +4,21 @@ import User from "../models/user.model.js";
 import Restaurant from "../models/restaurant.model.js";
 import FoodBank from "../models/foodBank.model.js";
 import Individual from "../models/individual.model.js";
+import VerificationCode from "../models/verification_code.model.js";
 
 import { generateToken } from "../utils/jwt.js";
+import { sendVerificationEmail, sendPasswordResetEmail } from "../utils/email.util.js";
 
 import {
   validateRegister,
   validateRole,
 } from "../validators/auth.validator.js";
+
+const generateCode = () =>
+  Math.floor(100000 + Math.random() * 900000).toString();
+
+const expiresIn15Min = () =>
+  new Date(Date.now() + 15 * 60 * 1000);
 
 const authService = {
   // REGISTER
@@ -52,13 +60,17 @@ const authService = {
       password: hashedPassword,
     });
 
-    // Generate JWT
-    const token = generateToken(user);
+    // Send verification code
+    const code = generateCode();
+    await VerificationCode.create({
+      user_id: user.user_id,
+      code,
+      type: "email_verification",
+      expires_at: expiresIn15Min(),
+    });
+    await sendVerificationEmail(email, code);
 
-    return {
-      token,
-      user,
-    };
+    return { email_verified: false, user_id: user.user_id, email };
   },
 
   // CHOOSE ROLE
@@ -250,21 +262,107 @@ const authService = {
       throw new Error("Invalid email or password");
     }
 
+    // Block unverified users and send a fresh code
+    if (!user.is_email_verified) {
+      const code = generateCode();
+      await VerificationCode.invalidateAll(user.user_id, "email_verification");
+      await VerificationCode.create({
+        user_id: user.user_id,
+        code,
+        type: "email_verification",
+        expires_at: expiresIn15Min(),
+      });
+      await sendVerificationEmail(user.email, code);
+      return { email_verified: false, user_id: user.user_id, email: user.email };
+    }
+
     // Generate JWT
     const token = generateToken(user);
 
     return {
       token,
-
       user: {
         user_id: user.user_id,
         username: user.username,
         email: user.email,
         role: user.role,
-        verification_status:
-          user.verification_status,
+        verification_status: user.verification_status,
       },
     };
+  },
+
+  // SEND VERIFICATION CODE (resend)
+  async sendVerificationCode(user_id) {
+    const user = await User.findById(user_id);
+    if (!user) throw new Error("User not found");
+
+    const code = generateCode();
+    await VerificationCode.invalidateAll(user_id, "email_verification");
+    await VerificationCode.create({
+      user_id,
+      code,
+      type: "email_verification",
+      expires_at: expiresIn15Min(),
+    });
+    await sendVerificationEmail(user.email, code);
+  },
+
+  // VERIFY EMAIL
+  async verifyEmail(user_id, code) {
+    const record = await VerificationCode.findValid({
+      user_id,
+      code,
+      type: "email_verification",
+    });
+    if (!record) throw new Error("Invalid or expired code");
+
+    await VerificationCode.markUsed(record.id);
+    const user = await User.setEmailVerified(user_id);
+    const token = generateToken(user);
+    return {
+      token,
+      user: {
+        user_id: user.user_id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        verification_status: user.verification_status,
+      },
+    };
+  },
+
+  // FORGOT PASSWORD
+  async forgotPassword(email) {
+    const user = await User.findByEmail(email);
+    if (!user) throw new Error("No account found with that email");
+
+    const code = generateCode();
+    await VerificationCode.invalidateAll(user.user_id, "password_reset");
+    await VerificationCode.create({
+      user_id: user.user_id,
+      code,
+      type: "password_reset",
+      expires_at: expiresIn15Min(),
+    });
+    await sendPasswordResetEmail(email, code);
+    return { user_id: user.user_id };
+  },
+
+  // RESET PASSWORD
+  async resetPassword(user_id, code, new_password) {
+    if (!new_password || new_password.length < 6) {
+      throw new Error("Password must be at least 6 characters");
+    }
+    const record = await VerificationCode.findValid({
+      user_id,
+      code,
+      type: "password_reset",
+    });
+    if (!record) throw new Error("Invalid or expired code");
+
+    await VerificationCode.markUsed(record.id);
+    const hashed = await bcrypt.hash(new_password, 10);
+    await User.updatePassword(user_id, hashed);
   },
 };
 

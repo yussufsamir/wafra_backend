@@ -6,6 +6,10 @@ import {
   logout,
   chooseRole,
   completeProfile,
+  sendVerificationCode,
+  verifyEmail,
+  forgotPassword,
+  resetPassword,
 } from "../controllers/auth.controller.js";
 
 import { authMiddleware } from "../middlewares/auth.middleware.js";
@@ -18,5 +22,10 @@ router.post("/logout", logout);
 
 router.patch("/choose-role", authMiddleware, chooseRole);
 router.patch("/complete-profile", authMiddleware, completeProfile);
+
+router.post("/send-verification", sendVerificationCode);
+router.post("/verify-email", verifyEmail);
+router.post("/forgot-password", forgotPassword);
+router.post("/reset-password", resetPassword);
 
 export default router;
