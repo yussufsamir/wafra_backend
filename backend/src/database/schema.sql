@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS food_listings (
 
     food_name VARCHAR(150) NOT NULL,
     category VARCHAR(100),
-    quantity DOUBLE PRECISION NOT NULL CHECK (quantity > 0),
+    quantity DOUBLE PRECISION NOT NULL CHECK (quantity >= 0),
 
     pickup_time TIMESTAMP NOT NULL,
     location TEXT,
