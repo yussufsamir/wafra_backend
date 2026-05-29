@@ -7,6 +7,7 @@ import userRoutes from "./routes/user.routes.js";
 import cors from "cors";
 import adminRoutes from "./routes/admin.routes.js";
 import pickupRoutes from "./routes/pickup.routes.js";
+import notificationRoutes from "./routes/notification.routes.js";
 
 const app = express();
 
@@ -24,5 +25,6 @@ app.use("/listings", listingRoutes);
 app.use("/reservations", reservationRoutes);
 app.use("/users", userRoutes);
 app.use("/pickups", pickupRoutes);
+app.use("/notifications", notificationRoutes);
 
 export default app;
