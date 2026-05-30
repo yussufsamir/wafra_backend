@@ -1,17 +1,11 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const sendVerificationEmail = async (to, code) => {
-  await transporter.sendMail({
-    from: `"Wafra" <${process.env.EMAIL_USER}>`,
-    to,
+  await resend.emails.send({
+    from: "Wafra <onboarding@resend.dev>",
+    to: [to],
     subject: "Verify your Wafra account",
     html: `
       <h2>Welcome to Wafra!</h2>
@@ -23,9 +17,9 @@ export const sendVerificationEmail = async (to, code) => {
 };
 
 export const sendPasswordResetEmail = async (to, code) => {
-  await transporter.sendMail({
-    from: `"Wafra" <${process.env.EMAIL_USER}>`,
-    to,
+  await resend.emails.send({
+    from: "Wafra <onboarding@resend.dev>",
+    to: [to],
     subject: "Reset your Wafra password",
     html: `
       <h2>Password Reset</h2>
