@@ -42,15 +42,21 @@ export const confirmPickup =
   async (req, res) => {
     try {
       const {
-        reservation_id,
         pickup_code,
+        reservation_id,
       } = req.body;
+
+      if (!pickup_code) {
+        return res.status(400).json({
+          error: "pickup_code is required",
+        });
+      }
 
       const result =
         await confirmPickupService(
           req.user.user_id,
-          reservation_id,
-          pickup_code
+          pickup_code,
+          reservation_id ?? null
         );
 
       res.status(200).json({

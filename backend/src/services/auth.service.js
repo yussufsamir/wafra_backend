@@ -8,14 +8,12 @@ import VerificationCode from "../models/verification_code.model.js";
 
 import { generateToken } from "../utils/jwt.js";
 import { sendVerificationEmail, sendPasswordResetEmail } from "../utils/email.util.js";
+import { generateCode } from "../utils/generateCode.js";
 
 import {
   validateRegister,
   validateRole,
 } from "../validators/auth.validator.js";
-
-const generateCode = () =>
-  Math.floor(100000 + Math.random() * 900000).toString();
 
 const expiresIn15Min = () =>
   new Date(Date.now() + 15 * 60 * 1000);
