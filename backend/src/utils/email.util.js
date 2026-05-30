@@ -1,11 +1,18 @@
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const transporter = nodemailer.createTransport({
+  host: "smtp-relay.brevo.com",
+  port: 587,
+  auth: {
+    user: process.env.BREVO_USER,
+    pass: process.env.BREVO_SMTP_KEY,
+  },
+});
 
 export const sendVerificationEmail = async (to, code) => {
-  await resend.emails.send({
-    from: "Wafra <onboarding@resend.dev>",
-    to: [to],
+  await transporter.sendMail({
+    from: `"Wafra" <${process.env.BREVO_USER}>`,
+    to,
     subject: "Verify your Wafra account",
     html: `
       <h2>Welcome to Wafra!</h2>
@@ -17,9 +24,9 @@ export const sendVerificationEmail = async (to, code) => {
 };
 
 export const sendPasswordResetEmail = async (to, code) => {
-  await resend.emails.send({
-    from: "Wafra <onboarding@resend.dev>",
-    to: [to],
+  await transporter.sendMail({
+    from: `"Wafra" <${process.env.BREVO_USER}>`,
+    to,
     subject: "Reset your Wafra password",
     html: `
       <h2>Password Reset</h2>
