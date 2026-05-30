@@ -301,6 +301,24 @@ export const cancelReservationService =
 
       await client.query("COMMIT");
 
+      // Best-effort: notify the restaurant that the reservation was cancelled
+      try {
+        const restaurant = await Restaurant.findById(
+          reservation.restaurant_id
+        );
+        if (restaurant) {
+          const who =
+            reservation.receiver_name ||
+            "A user";
+          await Notification.create({
+            user_id: restaurant.user_id,
+            title: "Reservation Cancelled",
+            message: `${who} cancelled their reservation for ${reservation.requested_quantity}x ${reservation.food_name}.`,
+            type: "reservation_cancelled",
+          });
+        }
+      } catch (_) {}
+
       return updatedReservation;
     } catch (error) {
       await client.query("ROLLBACK");
