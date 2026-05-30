@@ -90,8 +90,8 @@ export const generatePickupCodeService =
 export const confirmPickupService =
   async (
     user_id,
-    reservation_id,
-    pickup_code
+    pickup_code,
+    reservation_id = null
   ) => {
     const client = await db.connect();
 
@@ -109,16 +109,20 @@ export const confirmPickupService =
         );
       }
 
-      const pickup =
-        await Pickup.findByCodeAndReservation(
-          reservation_id,
-          pickup_code,
-          client
-        );
+      const pickup = reservation_id
+        ? await Pickup.findByCodeAndReservation(
+            reservation_id,
+            pickup_code,
+            client
+          )
+        : await Pickup.findByCode(
+            pickup_code,
+            client
+          );
 
       if (!pickup) {
         throw new Error(
-          "Invalid pickup data"
+          "Invalid pickup code"
         );
       }
 
