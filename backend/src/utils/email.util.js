@@ -1,20 +1,15 @@
-import nodemailer from "nodemailer";
+import postmark from "postmark";
 
-const transporter = nodemailer.createTransport({
-  host: "smtp-relay.brevo.com",
-  port: 587,
-  auth: {
-    user: process.env.BREVO_USER,
-    pass: process.env.BREVO_SMTP_KEY,
-  },
-});
+const client = new postmark.ServerClient(process.env.POSTMARK_API_KEY);
+
+const from = process.env.POSTMARK_FROM_EMAIL;
 
 export const sendVerificationEmail = async (to, code) => {
-  await transporter.sendMail({
-    from: `"Wafra" <${process.env.BREVO_USER}>`,
-    to,
-    subject: "Verify your Wafra account",
-    html: `
+  await client.sendEmail({
+    From: from,
+    To: to,
+    Subject: "Verify your Wafra account",
+    HtmlBody: `
       <h2>Welcome to Wafra!</h2>
       <p>Your verification code is:</p>
       <h1 style="letter-spacing:8px">${code}</h1>
@@ -24,11 +19,11 @@ export const sendVerificationEmail = async (to, code) => {
 };
 
 export const sendPasswordResetEmail = async (to, code) => {
-  await transporter.sendMail({
-    from: `"Wafra" <${process.env.BREVO_USER}>`,
-    to,
-    subject: "Reset your Wafra password",
-    html: `
+  await client.sendEmail({
+    From: from,
+    To: to,
+    Subject: "Reset your Wafra password",
+    HtmlBody: `
       <h2>Password Reset</h2>
       <p>Your password reset code is:</p>
       <h1 style="letter-spacing:8px">${code}</h1>
