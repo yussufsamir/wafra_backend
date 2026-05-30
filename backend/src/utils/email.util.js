@@ -1,15 +1,15 @@
-import postmark from "postmark";
+import { Resend } from "resend";
 
-const client = new postmark.ServerClient(process.env.POSTMARK_API_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-const from = process.env.POSTMARK_FROM_EMAIL;
+const from = "Wafra <noreply@wafra.me>";
 
 export const sendVerificationEmail = async (to, code) => {
-  await client.sendEmail({
-    From: from,
-    To: to,
-    Subject: "Verify your Wafra account",
-    HtmlBody: `
+  await resend.emails.send({
+    from,
+    to: [to],
+    subject: "Verify your Wafra account",
+    html: `
       <h2>Welcome to Wafra!</h2>
       <p>Your verification code is:</p>
       <h1 style="letter-spacing:8px">${code}</h1>
@@ -19,11 +19,11 @@ export const sendVerificationEmail = async (to, code) => {
 };
 
 export const sendPasswordResetEmail = async (to, code) => {
-  await client.sendEmail({
-    From: from,
-    To: to,
-    Subject: "Reset your Wafra password",
-    HtmlBody: `
+  await resend.emails.send({
+    from,
+    to: [to],
+    subject: "Reset your Wafra password",
+    html: `
       <h2>Password Reset</h2>
       <p>Your password reset code is:</p>
       <h1 style="letter-spacing:8px">${code}</h1>
